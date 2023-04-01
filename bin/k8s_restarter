@@ -1,0 +1,26 @@
+#!/bin/env ruby
+# frozen_string_literal: true
+
+require 'k8s_restarter'
+require 'optparse'
+
+# Optparse.new.parse
+
+logger = Logging.logger[K8sRestarter].tap do |log|
+  log.add_appenders Logging.appenders.stdout
+  log.level = :debug
+end
+
+conf = K8sRestarter::Config.load
+cl = K8sRestarter::Client.new
+
+#cl.noop = conf.noop
+conf.handlers.each { |h| cl.add_handler h }
+
+while true do
+  cl.update
+
+  logger.debug "Resting..."
+
+  sleep conf.interval
+end

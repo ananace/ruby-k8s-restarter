@@ -1,0 +1,11 @@
+---
+handlers:
+  PodNotReady:
+    enabled: true
+    params:
+      timeout: 3600
+
+  PodStuckTerminating:
+    enabled: true
+    params:
+      also_jobs: true
