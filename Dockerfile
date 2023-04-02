@@ -1,17 +1,11 @@
-FROM ruby:3.0
+FROM ruby:3.0-alpine
 
-ENV APP_HOME /app
+WORKDIR /app
+COPY Gemfile *.gemspec /app/
+COPY bin /app/bin/
+COPY lib /app/lib/
 
-RUN mkdir -p $APP_HOME/lib/k8s-restarter
-WORKDIR $APP_HOME
+RUN bundle config set --local without 'development' \
+ && bundle install
 
-ADD Gemfile* $APP_HOME/
-ADD *gemspec $APP_HOME/
-ADD bin $APP_HOME/bin/
-ADD lib/k8s_restarter/version.rb $APP_HOME/lib/k8s_restarter/version.rb
-
-RUN bundle install --without development --binstubs=/usr/local/bin
-
-ADD lib $APP_HOME/lib/
-
-ENTRYPOINT [ "/usr/local/bin/k8s_restarter" ]
+ENTRYPOINT [ "/usr/local/bin/bundle", "exec", "bin/k8s_restarter" ]
