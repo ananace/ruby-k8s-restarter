@@ -10,7 +10,7 @@ ADD *gemspec $APP_HOME/
 ADD bin $APP_HOME/bin/
 ADD lib/k8s_restarter/version.rb $APP_HOME/lib/k8s_restarter/version.rb
 
-RUN bundle install --without development --deployment --binstubs=/usr/local/bin
+RUN bundle install --without development --binstubs=/usr/local/bin
 
 ADD lib $APP_HOME/lib/
 
