@@ -12,11 +12,13 @@ module K8sRestarter
       end
 
       def load!(file = 'config.yml')
+        logger.info "Loading config from #{file}"
+
         doc = Psych.load(File.read(file))
 
         handlers = doc['handlers'].map do |handler, data|
           unless data.fetch('enabled', false)
-            logger.info "Handler #{handler} not enabled, skipping."
+            logger.debug "Handler #{handler} not enabled, skipping."
             next
           end
 
@@ -31,7 +33,7 @@ module K8sRestarter
           klass.new(**args)
         end.compact
 
-        new handlers: handlers
+        new handlers: handlers, interval: doc['interval'] || 60, noop: doc['noop'] || false
       end
 
       private
@@ -43,10 +45,10 @@ module K8sRestarter
 
     attr_reader :handlers, :interval, :noop
 
-    def initialize(handlers: [])
+    def initialize(handlers: [], interval: 60, noop: false)
       @handlers = handlers
-      @interval = 60
-      @noop = true
+      @interval = interval
+      @noop = noop
     end
   end
 end

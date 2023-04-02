@@ -2,8 +2,6 @@
 
 require 'ostruct'
 
-class Boolean; end
-
 module K8sRestarter
   class Handler
     attr_accessor :client
@@ -15,7 +13,7 @@ module K8sRestarter
         setter = :"#{k}="
         raise ArgumentError, "Unknown parameter #{k}" unless respond_to? setter
 
-        self.send(setter, v)
+        send(setter, v)
       end
     end
 
@@ -32,7 +30,7 @@ module K8sRestarter
     end
 
     def parameters
-      self.class.parameters.map { |k, v| [k, send(k)] }.to_h
+      self.class.parameters.to_h { |k, _v| [k, send(k)] }
     end
 
     def applicable?(pod)
@@ -52,7 +50,7 @@ module K8sRestarter
           next
         end
 
-        logger.debug "#{action.to_s.gsub('_', ' ').capitalize.delete_suffix('e') + 'ing'} #{pod}."
+        logger.debug "#{"#{action.to_s.gsub('_', ' ').capitalize.delete_suffix('e')}ing"} #{pod}."
 
         case action
         when :evict
@@ -117,8 +115,16 @@ module K8sRestarter
           type2 = type
         end
 
-        unless value.nil?
-          class_eval <<~EOF
+        if value.nil?
+          class_eval <<~CODE, __FILE__, __LINE__ + 1
+            private
+
+            def #{name}_default
+              nil
+            end
+          CODE
+        else
+          class_eval <<~CODE, __FILE__, __LINE__ + 1
             private
 
             def #{name}_default
@@ -127,18 +133,10 @@ module K8sRestarter
 
               val
             end
-          EOF
-        else
-          class_eval <<~EOF
-            private
-
-            def #{name}_default
-              nil
-            end
-          EOF
+          CODE
         end
 
-        class_eval <<~EOF
+        class_eval <<~CODE, __FILE__, __LINE__ + 1
           def #{name}
             @parameters ||= {}
             @parameters.fetch(#{name.inspect}, #{name}_default)
@@ -147,7 +145,7 @@ module K8sRestarter
           def #{name}=(input)
             #{type == String ? 'input = input.to_s if !input.is_a? String' : nil}
             #{type == Symbol ? 'input = input.to_s.delete_prefix(":").to_sym if !input.is_a? Symbol' : nil}
-            #{(type == Numeric || type == Float) ? 'input = input.to_s.to_f if !input.is_a?(Numeric) && input.to_s =~ /^-?\d+(\.\d+)?$/' : nil}
+            #{[Numeric, Float].include? type ? 'input = input.to_s.to_f if !input.is_a?(Numeric) && input.to_s =~ /^-?\d+(\.\d+)?$/' : nil}
             #{type == Integer ? 'input = input.to_s.to_i if !input.is_a?(Integer) && input.to_s =~ /^-?\d+(\.\d+)?$/' : nil}
             #{type == :bool ? 'input = input.to_s =~ /^t(rue)?|y(es)?|1$/i if !input.is_a?(TrueClass) && !input.is_a?(FalseClass)' : nil}
 
@@ -156,12 +154,12 @@ module K8sRestarter
             @parameters ||= {}
             @parameters[#{name.inspect}] = input
           end
-        EOF
+        CODE
       end
     end
 
     desc <<~DOC
-    Filter the acceptable pods by a given label selector (key=value)
+      Filter the acceptable pods by a given label selector (key=value)
     DOC
     parameter :label_selector, Hash, {}
 
@@ -176,9 +174,15 @@ module K8sRestarter
     end
 
     def storage(pod)
-      pod.storage[key] ||= OpenStruct.new.tap do
-        def delete!
-          pod.storage.delete key
+      pod.storage[key] ||= OpenStruct.new.tap do |struct| # rubocop:disable Style/OpenStructUse
+        struct._pod = pod
+        struct._key = key
+
+        struct.instance_eval do
+          def delete!
+            _pod.storage.delete _key
+            nil
+          end
         end
       end
     end

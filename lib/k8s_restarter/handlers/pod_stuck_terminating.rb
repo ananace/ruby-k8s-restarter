@@ -5,8 +5,8 @@ require 'time'
 module K8sRestarter::Handlers
   class PodStuckTerminating < K8sRestarter::Handler
     desc <<~DOC
-    The timeout value in seconds before counting a terminating pod as "stuck".
-    A negative value will be counted as a multiplier of the termination grace period.
+      The timeout value in seconds before counting a terminating pod as "stuck".
+      A negative value will be counted as a multiplier of the termination grace period.
     DOC
     parameter :timeout_grace, Numeric, 24 * 60 * 60
 
@@ -16,23 +16,23 @@ module K8sRestarter::Handlers
     def applicable?(pod)
       return false unless pod.metadata.deletionTimestamp
       return false if !also_jobs && pod.metadata.ownerReference&.any? { |ref| ref.apiVersion == 'batch/v1' && ref.kind == 'Job' }
-      #return false if !also_failed && pod.phase
+
+      # return false if !also_failed && pod.phase
 
       super
     end
 
     def update(pod)
-      if timeout_grace >= 0
-        timeout = timeout_grace
-      else
-        timeout = pod.spec.terminationGracePeriodSeconds * -timeout_grace
-      end
+      timeout = if timeout_grace >= 0
+                  timeout_grace
+                else
+                  pod.spec.terminationGracePeriodSeconds * -timeout_grace
+                end
 
-      if (dur = Time.now - Time.parse(pod.metadata.deletionTimestamp)) >= timeout
+      return unless (dur = Time.now - Time.parse(pod.metadata.deletionTimestamp)) >= timeout
 
-        logger.info "Pod #{pod} still terminating after #{dur.to_duration}, marking for force deletion"
-        mark(pod, :force_delete)
-      end
+      logger.info "Pod #{pod} still terminating after #{dur.to_duration}, marking for force deletion"
+      mark(pod, :force_delete)
     end
   end
 end

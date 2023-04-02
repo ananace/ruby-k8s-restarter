@@ -1,4 +1,6 @@
 ---
+noop: false
+interval: 60
 handlers:
   PodNotReady:
     enabled: true

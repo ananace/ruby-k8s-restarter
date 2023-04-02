@@ -13,17 +13,16 @@ module K8sRestarter
       @data = data
     end
 
-    def namespace; metadata.namespace; end
-    def name; metadata.name; end
-    def uuid; metadata.uid; end
+    def uuid
+      metadata.uid
+    end
 
     def refresh!(data = nil)
       data = data.data if data.is_a? Pod
 
       @data = data
-      #@node = node
     end
-    
+
     def node
       client.k8s_client.api('v1').resource('nodes').get(data.spec.nodeName)
     end
@@ -49,7 +48,7 @@ module K8sRestarter
         path: rc.path(name, namespace: namespace),
         query: rc.make_query(
           'gracePeriodSeconds' => 0,
-          'propagationPolicy' => 'Background',
+          'propagationPolicy' => 'Background'
         ),
         response_class: rc.resource_class
       )
@@ -59,9 +58,17 @@ module K8sRestarter
       @data = nil
     end
 
-    def metadata; @data.metadata; end
-    def spec; @data.spec; end
-    def status; @data.status; end
+    def metadata
+      @data.metadata
+    end
+
+    def spec
+      @data.spec
+    end
+
+    def status
+      @data.status
+    end
 
     def to_s
       "#{namespace}/#{name}"

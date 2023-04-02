@@ -3,23 +3,66 @@
 
 require 'k8s_restarter'
 require 'optparse'
+require 'ostruct'
 
-# Optparse.new.parse
+options = OpenStruct.new( # rubocop:disable Style/OpenStructUse
+  log_level: :info,
+  config: '/etc/k8s_restarter.yml'
+)
+options.config = 'config.yml' if File.exist? 'config.yml'
+
+OptParse.new do |opts|
+  opts.banner = 'Usage: k8s_restarter [OPTIONS...]'
+
+  opts.on '-c', '--config=FILE', 'Specify the configuration file to read' do |file|
+    raise ArgumentError, 'Not a valid file' unless File.exist? file
+
+    options.config = file
+  end
+
+  opts.on '-n', '--noop', 'Run the application in no-op mode' do
+    options.noop = true
+  end
+
+  opts.separator ''
+
+  opts.on '-h', '--help', 'Print this text and exit' do
+    puts opts
+    exit
+  end
+
+  opts.on '-q', '--quiet', 'Run quietly' do
+    options[:log_level] = :error
+  end
+  opts.on '-v', '--verbose', 'Run verbosely' do
+    options[:log_level] = :debug
+  end
+
+  opts.on '-V', '--version', 'Print the version and exit' do
+    puts K8sRestarter::VERSION
+    exit
+  end
+end.parse!
 
 logger = Logging.logger[K8sRestarter].tap do |log|
   log.add_appenders Logging.appenders.stdout
-  log.level = :debug
+  log.level = options.log_level
 end
 
-conf = K8sRestarter::Config.load
+conf = K8sRestarter::Config.load options.config
 cl = K8sRestarter::Client.new
 
-#cl.noop = conf.noop
+cl.noop = conf.noop
+cl.noop = options.noop unless options.noop.nil?
 conf.handlers.each { |h| cl.add_handler h }
 
-logger.info 'Running in no-op mode, not applying any actions.' if cl.noop
+if cl.noop
+  logger.info 'Running in no-op mode, not applying any actions.'
+else
+  logger.info 'K8s Restarter now running...'
+end
 
-while true do
+loop do
   cl.update
 
   logger.debug 'Resting...'

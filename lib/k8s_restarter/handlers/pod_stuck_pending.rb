@@ -5,7 +5,7 @@ require 'time'
 module K8sRestarter::Handlers
   class PodStuckPending < K8sRestarter::Handler
     desc <<~DOC
-    The timeout value in seconds before counting a pending pod as "stuck".
+      The timeout value in seconds before counting a pending pod as "stuck".
     DOC
     parameter :timeout, Numeric, 24 * 60 * 60
 
@@ -19,10 +19,10 @@ module K8sRestarter::Handlers
     end
 
     def update(pod)
-      if (dur = Time.now - Time.parse(pod.metadata.creationTimestamp)) >= timeout
-        logger.info "Pod #{pod} still pending after #{dur.to_duration}, marking for deletion"
-        mark(pod, :delete)
-      end
+      return unless (dur = Time.now - Time.parse(pod.metadata.creationTimestamp)) >= timeout
+
+      logger.info "Pod #{pod} still pending after #{dur.to_duration}, marking for deletion"
+      mark(pod, :delete)
     end
   end
 end

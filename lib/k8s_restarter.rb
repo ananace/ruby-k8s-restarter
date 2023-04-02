@@ -12,6 +12,7 @@ require 'logging'
 module K8sRestarter
   class Error < StandardError; end
 
+  # Pod handlers
   module Handlers
     def self.const_defined?(name)
       file_name = "#{name.to_s.underscore}.rb"
@@ -21,7 +22,7 @@ module K8sRestarter
     def self.const_missing(name)
       file_name = name.to_s.underscore
       require File.join(__dir__, 'k8s_restarter/handlers', file_name)
-      return const_get(name)
+      const_get(name)
     end
   end
 end

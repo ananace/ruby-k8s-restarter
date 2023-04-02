@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 module K8sRestarter
+  # Handler client
   class Client
     attr_accessor :noop
 
@@ -26,7 +27,7 @@ module K8sRestarter
       end
 
       if handler.is_a? Class
-        handler = handler.new **args
+        handler = handler.new(**args)
       elsif handler.is_a? Handler
         args.each do |k, v|
           handler.public_send :"#{k}=", v
@@ -41,7 +42,7 @@ module K8sRestarter
     end
 
     def update
-      logger.debug "Retrieving updated pod list..."
+      logger.debug 'Retrieving updated pod list...'
 
       pod_list = pods
 
@@ -55,7 +56,7 @@ module K8sRestarter
         end
       end
 
-      logger.debug "Applying any queued actions..."
+      logger.debug 'Applying any queued actions...'
 
       @handlers.each do |h|
         h.act! noop: @noop
@@ -63,9 +64,7 @@ module K8sRestarter
     end
 
     def k8s_client
-      @k8s_client ||= begin
-        K8s::Client.autoconfig
-      end
+      @k8s_client ||= K8s::Client.autoconfig
     end
 
     def k8s_version
