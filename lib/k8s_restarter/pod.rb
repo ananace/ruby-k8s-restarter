@@ -18,7 +18,7 @@ module K8sRestarter
     end
 
     def refresh!(data = nil)
-      data = data.data if data.is_a? Pod
+      data = data.send :data if data.is_a? Pod
 
       @data = data
     end
