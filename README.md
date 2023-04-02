@@ -4,6 +4,7 @@ A small daemon meant to run alongside the official Kubernetes descheduler, perfo
 
 Currently supports;
 - Force-deleting pods that are stuck terminating
+- Deleting pods that never progress past pending
 - Evicting pods that never become ready
 
 ## Usage

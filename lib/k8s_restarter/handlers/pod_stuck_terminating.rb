@@ -13,35 +13,24 @@ module K8sRestarter::Handlers
     parameter :also_jobs, :bool, false
     parameter :also_failed, :bool, true
 
+    def applicable?(pod)
+      return false unless pod.metadata.deletionTimestamp
+      return false if !also_jobs && pod.metadata.ownerReference&.any? { |ref| ref.apiVersion == 'batch/v1' && ref.kind == 'Job' }
+      #return false if !also_failed && pod.phase
+
+      super
+    end
+
     def update(pod)
-      return if pod.metadata.labels[:'job-name'] && !also_jobs
-
-      if !storage(pod).terminating_at
-        if pod.metadata.deletionTimestamp
-          storage(pod).terminating_at = Time.parse(pod.metadata.deletionTimestamp)
-        elsif %w[Failed Unknown].include?(pod.phase) && also_failed
-          storage(pod).terminating_at = Time.now
-        else
-          node = pod.node
-          node_ready = node.status.conditions.find do |cond|
-            cond.type == 'Ready' && cond.status.downcase != 'true'
-          end
-
-          storage(pod).terminating_at = Time.now unless node_ready
-        end
-      end
-
-      return unless storage(pod).terminating_at
-
       if timeout_grace >= 0
         timeout = timeout_grace
       else
         timeout = pod.spec.terminationGracePeriodSeconds * -timeout_grace
       end
 
-      if (dur = Time.now - storage(pod).terminating_at) >= timeout
+      if (dur = Time.now - Time.parse(pod.metadata.deletionTimestamp)) >= timeout
 
-        logger.debug "Pod #{pod} is stuck in terminating (#{dur.to_duration}), marking for force delete"
+        logger.info "Pod #{pod} still terminating after #{dur.to_duration}, marking for force deletion"
         mark(pod, :force_delete)
       end
     end

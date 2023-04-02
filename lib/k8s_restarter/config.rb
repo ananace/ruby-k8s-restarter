@@ -29,7 +29,7 @@ module K8sRestarter
           args = (data['params'] || {}).transform_keys(&:to_sym)
 
           klass.new(**args)
-        end
+        end.compact
 
         new handlers: handlers
       end

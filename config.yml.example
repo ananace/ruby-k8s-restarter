@@ -9,3 +9,9 @@ handlers:
     enabled: true
     params:
       also_jobs: true
+
+  PodStuckPending:
+    enabled: true
+    params:
+      label_selector:
+        kubernetes.io/arch: amd64

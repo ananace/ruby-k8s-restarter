@@ -35,14 +35,24 @@ module K8sRestarter
       self.class.parameters.map { |k, v| [k, send(k)] }.to_h
     end
 
+    def applicable?(pod)
+      return true if label_selector.empty?
+
+      label_selector.each do |key, value|
+        return false if pod.metadata.labels[key] != value
+      end
+
+      true
+    end
+
     def act!(noop: false)
       @marked.each do |pod, action|
         if noop
-          logger.info "For #{pod}, would have applied action #{action.to_s.gsub '_', ' '}, but skipping due to no-op."
+          logger.debug "For #{pod}, would have applied action #{action.to_s.gsub '_', ' '}, but skipping due to no-op."
           next
         end
 
-        logger.info "#{action.to_s.gsub('_', ' ').capitalize.delete_suffix('e') + 'ing'} #{pod}."
+        logger.debug "#{action.to_s.gsub('_', ' ').capitalize.delete_suffix('e') + 'ing'} #{pod}."
 
         case action
         when :evict
@@ -76,7 +86,13 @@ module K8sRestarter
     end
 
     class << self
-      attr_reader :parameters
+      def parameters
+        if superclass.respond_to? :parameters
+          superclass.parameters.merge @parameters
+        else
+          @parameters
+        end
+      end
 
       def desc(description)
         @param_desc = description
@@ -143,6 +159,11 @@ module K8sRestarter
         EOF
       end
     end
+
+    desc <<~DOC
+    Filter the acceptable pods by a given label selector (key=value)
+    DOC
+    parameter :label_selector, Hash, {}
 
     protected
 

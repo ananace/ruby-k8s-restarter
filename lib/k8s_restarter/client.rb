@@ -16,6 +16,8 @@ module K8sRestarter
     end
 
     def add_handler(handler, **args)
+      logger.debug "Adding handler #{handler.inspect}"
+
       if handler.is_a? Class
         pre_handler = handler
         handler = K8sRestarter::Handlers.const_get(handler.to_s.to_sym) rescue nil
@@ -41,13 +43,19 @@ module K8sRestarter
     def update
       logger.debug "Retrieving updated pod list..."
 
-      pods.each do |pod|
-        @handlers.each do |handler|
+      pod_list = pods
+
+      @handlers.each do |handler|
+        logger.debug "Applying handler #{handler.class} to pod list..."
+
+        pod_list.each do |pod|
+          next unless handler.applicable? pod
+
           handler.update pod
         end
       end
 
-      logger.debug "Applying queued actions..."
+      logger.debug "Applying any queued actions..."
 
       @handlers.each do |h|
         h.act! noop: @noop

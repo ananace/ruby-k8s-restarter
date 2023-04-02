@@ -17,10 +17,12 @@ cl = K8sRestarter::Client.new
 #cl.noop = conf.noop
 conf.handlers.each { |h| cl.add_handler h }
 
+logger.info 'Running in no-op mode, not applying any actions.' if cl.noop
+
 while true do
   cl.update
 
-  logger.debug "Resting..."
+  logger.debug 'Resting...'
 
   sleep conf.interval
 end

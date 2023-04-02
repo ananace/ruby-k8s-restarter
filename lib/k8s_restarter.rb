@@ -13,7 +13,15 @@ module K8sRestarter
   class Error < StandardError; end
 
   module Handlers
-    autoload :PodNotReady, 'k8s_restarter/handlers/pod_not_ready'
-    autoload :PodStuckTerminating, 'k8s_restarter/handlers/pod_stuck_terminating'
+    def self.const_defined?(name)
+      file_name = "#{name.to_s.underscore}.rb"
+      File.exist? File.join(__dir__, 'k8s_restarter/handlers', file_name)
+    end
+
+    def self.const_missing(name)
+      file_name = name.to_s.underscore
+      require File.join(__dir__, 'k8s_restarter/handlers', file_name)
+      return const_get(name)
+    end
   end
 end
