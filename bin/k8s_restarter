@@ -24,6 +24,10 @@ OptParse.new do |opts|
     options.noop = true
   end
 
+  opts.on '-S', '--single', 'Run once and then exit' do
+    options.single = true
+  end
+
   opts.separator ''
 
   opts.on '-h', '--help', 'Print this text and exit' do
@@ -64,6 +68,8 @@ end
 
 loop do
   cl.update
+
+  exit if conf.single
 
   logger.debug 'Resting...'
 
