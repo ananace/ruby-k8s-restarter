@@ -54,22 +54,7 @@ module K8sRestarter
 
         case action
         when :evict
-          apiversion = client.k8s_version?('>= 1.22') ? 'policy/v1' : 'policy/v1beta1'
-
-          obj = K8s::Resource.new(
-            apiVersion: apiversion,
-            kind: 'Eviction',
-            metadata: {
-              namespace: pod.namespace,
-              name: pod.name
-            }
-          )
-
-          client
-            .k8s_client
-            .api(apiversion)
-            .resource('eviction')
-            .create(obj)
+          pod.evict
         when :delete
           pod.delete
         when :force_delete

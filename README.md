@@ -6,6 +6,7 @@ Currently supports;
 - Force-deleting pods that are stuck terminating
 - Deleting pods that never progress past pending
 - Evicting pods that never become ready
+- Evicting pods that have restarted too many times
 
 ## Usage
 

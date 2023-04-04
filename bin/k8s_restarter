@@ -69,7 +69,7 @@ end
 loop do
   cl.update
 
-  exit if conf.single
+  exit if options.single
 
   logger.debug 'Resting...'
 

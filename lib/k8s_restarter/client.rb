@@ -44,13 +44,11 @@ module K8sRestarter
     def update
       logger.debug 'Retrieving updated pod list...'
 
-      pod_list = pods
-
-      @handlers.each do |handler|
-        logger.debug "Applying handler #{handler.class} to pod list..."
-
-        pod_list.each do |pod|
+      pods do |pod|
+        @handlers.each do |handler|
           next unless handler.applicable? pod
+
+          logger.debug "Applying handler #{handler.class} to #{pod}..."
 
           handler.update pod
         end
@@ -79,15 +77,18 @@ module K8sRestarter
 
     private
 
-    def pods
-      current = k8s_client.api('v1').resource('pods').list.map do |podspec|
-        Pod.new(
+    def pods(&block)
+      keep = Set.new
+
+      k8s_client.api('v1').resource('pods').list.each do |podspec|
+        pod = Pod.new(
           podspec.metadata.namespace,
           podspec.metadata.name,
           client: self,
           data: podspec
         )
-      end.each do |pod|
+        keep << pod.uuid
+
         stored = @pods.find { |existing| existing.uuid == pod.uuid }
         if stored
           stored.refresh!(pod)
@@ -95,10 +96,13 @@ module K8sRestarter
           @pods << pod
           stored = pod
         end
-        stored
-      end.map(&:uuid)
 
-      @pods.delete_if { |pod| !current.include? pod.uuid }
+        block.call stored
+
+        stored.clear!
+      end
+
+      @pods.delete_if { |pod| !keep.include? pod.uuid }
     end
   end
 end

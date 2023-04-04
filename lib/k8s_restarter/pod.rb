@@ -11,16 +11,22 @@ module K8sRestarter
 
       @storage = {}
       @data = data
+
+      uuid # Ensure uuid is stored
     end
 
     def uuid
-      metadata.uid
+      @uuid ||= metadata.uid
     end
 
     def refresh!(data = nil)
       data = data.send :data if data.is_a? Pod
 
       @data = data
+    end
+
+    def clear!
+      @data = nil
     end
 
     def node
@@ -50,6 +56,28 @@ module K8sRestarter
           'gracePeriodSeconds' => 0,
           'propagationPolicy' => 'Background'
         ),
+        response_class: rc.resource_class
+      )
+    end
+
+    def evict
+      apiversion = client.k8s_version?('>= 1.22') ? 'policy/v1' : 'policy/v1beta1'
+
+      obj = K8s::Resource.new(
+        apiVersion: apiversion,
+        kind: 'Eviction',
+        metadata: {
+          namespace: namespace,
+          name: name
+        }
+      )
+
+      rc = client.k8s_client.api('v1').resource('pods/eviction', namespace: namespace)
+      # rc.create_resource(obj)
+      client.k8s_client.transport.request(
+        method: 'POST',
+        path: rc.path(name, namespace: namespace, subresource: 'eviction'),
+        request_object: obj,
         response_class: rc.resource_class
       )
     end
