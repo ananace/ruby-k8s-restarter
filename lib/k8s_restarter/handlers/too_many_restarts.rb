@@ -11,7 +11,7 @@ module K8sRestarter::Handlers
       return false if pod.metadata.deletionTimestamp
       return false if !also_daemonsets && pod.metadata.ownerReferences&.any? { |ref| ref.apiVersion == 'apps/v1' && ref.kind == 'DaemonSet' }
 
-      restart_count = pod.status.containerStatuses&.sum { |s| s.restartCount } || 0
+      restart_count = pod.status.containerStatuses&.sum(&:restartCount) || 0
       return false if restart_count < count
 
       super
