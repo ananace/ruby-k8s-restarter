@@ -4,7 +4,7 @@ module K8sRestarter::Handlers
   class TooManyRestarts < K8sRestarter::Handler
     parameter :action, Symbol, :evict, validate: ->(inp) { %i[delete evict].include?(inp) }
     parameter :also_daemonsets, :bool, false
-    parameter :count, Numeric, 1000
+    parameter :count, Numeric, 100
 
     def applicable?(pod)
       return false if pod.phase == :pending
